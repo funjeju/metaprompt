@@ -106,6 +106,68 @@ export async function callLLM(params: LlmCallParams): Promise<LlmCallResult> {
   };
 }
 
+// ── 실시간 grounding (RAG 최신성) — Responses API web_search ────────
+// 정적 인덱스가 아니라 생성 시점에 라이브 웹 검색 → 최신성 구조적 보장 + 출처 반환.
+export interface WebSearchCitation {
+  url: string;
+  title: string;
+}
+export interface WebSearchResult {
+  text: string;
+  citations: WebSearchCitation[];
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+}
+
+export async function webSearchGround(query: string): Promise<WebSearchResult> {
+  // grounding 검색 모델 — 미설정 시 generate 모델 사용.
+  const model =
+    process.env.LLM_MODEL_GROUND?.trim() ||
+    process.env.LLM_MODEL_GENERATE?.trim() ||
+    "gpt-5.4-mini";
+  const openai = getClient();
+  const startedAt = Date.now();
+  const res = await openai.responses.create({
+    model,
+    // openai SDK 4.104 타입은 GA 명칭 'web_search'를 아직 모름(런타임 동작 확인됨). 캐스팅.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: [{ type: "web_search" }] as any,
+    input: query,
+  });
+  const latencyMs = Date.now() - startedAt;
+
+  const citations: WebSearchCitation[] = [];
+  for (const item of res.output ?? []) {
+    if (item.type === "message") {
+      for (const block of item.content ?? []) {
+        if ("annotations" in block && Array.isArray(block.annotations)) {
+          for (const a of block.annotations) {
+            if (a.type === "url_citation") {
+              citations.push({ url: a.url, title: a.title ?? a.url });
+            }
+          }
+        }
+      }
+    }
+  }
+  // 중복 출처 제거.
+  const seen = new Set<string>();
+  const uniqueCitations = citations.filter((c) =>
+    seen.has(c.url) ? false : (seen.add(c.url), true),
+  );
+
+  return {
+    text: res.output_text ?? "",
+    citations: uniqueCitations,
+    model,
+    inputTokens: res.usage?.input_tokens ?? 0,
+    outputTokens: res.usage?.output_tokens ?? 0,
+    latencyMs,
+  };
+}
+
 // ── 이미지 생성 (결과물 바로 보기 — target=image 렌더) ──────────────
 // DECISION: 기본 gpt-image-1-mini (2026-06 최저가, 카드당 ~$0.005). env LLM_MODEL_IMAGE 로 교체.
 export interface ImageResult {

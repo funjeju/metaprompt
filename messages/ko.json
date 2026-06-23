@@ -19,6 +19,9 @@
     "otherPlaceholder": "직접 입력해 주세요",
     "back": "이전",
     "next": "다음",
+    "materialLabel": "참고 자료 (선택)",
+    "materialDesc": "내 상품/주제 자료를 URL이나 텍스트로 넣으면 최우선 근거로 반영해요. (최신 사실은 실시간 웹 검색으로 자동 확보)",
+    "materialPlaceholder": "예: 상품 페이지 URL, 또는 직접 적은 상품 설명·스펙",
     "generate": "프롬프트 생성",
     "regenerate": "다시 생성",
     "restart": "새로 시작",
@@ -47,7 +50,8 @@
     "runHereTitle": "여기서 바로 결과 만들기",
     "runHereDesc": "이 프롬프트를 다른 AI에 넣어도 되고, 우리 사이트에서 바로 실행해 결과와 이미지 프롬프트를 받을 수도 있어요.",
     "runHere": "우리 사이트에서 실행",
-    "extractedImages": "추출된 이미지 프롬프트 {count}개 — 각각 이미지로 생성할 수 있어요"
+    "extractedImages": "추출된 이미지 프롬프트 {count}개 — 각각 이미지로 생성할 수 있어요",
+    "sourcesLabel": "근거 출처 (실시간 확인)"
   },
   "theme": {
     "light": "라이트",

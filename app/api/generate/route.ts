@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { runBlueprint, runSynthesis, type EngineAnswer } from "@/lib/engine";
+import {
+  runBlueprint,
+  runGrounding,
+  runSynthesis,
+  type EngineAnswer,
+} from "@/lib/engine";
 import { isLlmConfigured, LlmConfigError } from "@/lib/llm";
 import { JsonParseError } from "@/lib/engine/json";
 import {
@@ -12,8 +17,9 @@ import { getSessionUser } from "@/lib/firebase/server-auth";
 import { clientCountry, clientIp, jsonError, normalizeLocale } from "@/lib/http";
 
 export const runtime = "nodejs";
+export const maxDuration = 60; // grounding(web_search)+blueprint+synthesis 체인
 
-// POST /api/generate — 3·4층: 최종 프롬프트 생성.
+// POST /api/generate — RAG grounding → 설계도 → 합성(마스터 프롬프트).
 // DECISION: 코어 플로우가 Firestore에 하드 의존하지 않도록 클라이언트가
 //   inputText/intentGuess 를 함께 echo한다(docs/02 규격 확장).
 export async function POST(req: Request) {
@@ -26,6 +32,7 @@ export async function POST(req: Request) {
     inputText?: unknown;
     intentGuess?: unknown;
     answers?: unknown;
+    userMaterial?: unknown;
     locale?: unknown;
     outputLang?: unknown;
   };
@@ -44,6 +51,10 @@ export async function POST(req: Request) {
   }
   const intentGuess =
     typeof body.intentGuess === "string" ? body.intentGuess.trim() : "";
+  const userMaterial =
+    typeof body.userMaterial === "string"
+      ? body.userMaterial.trim().slice(0, 6000)
+      : "";
   const outputLang = normalizeLocale(body.outputLang ?? body.locale);
 
   // 답변 정규화 — id/value 문자열만 통과.
@@ -65,13 +76,12 @@ export async function POST(req: Request) {
   const uid = sessionUser?.uid ?? null;
 
   try {
-    // 3층-A: 설계도 → 3층-B: 합성(프롬프트 패키지). 2콜 체인.
-    const { blueprint, blueprintText, usage: bpUsage } = await runBlueprint({
-      inputText,
-      intentGuess,
-      answers,
-      outputLang,
-    });
+    // RAG grounding(실시간 web_search)과 설계도는 서로 독립 → 병렬 실행으로 지연 단축.
+    const [grounding, bp] = await Promise.all([
+      runGrounding({ inputText, intentGuess, answers, userMaterial, outputLang }),
+      runBlueprint({ inputText, intentGuess, answers, outputLang }),
+    ]);
+    const { blueprint, blueprintText, usage: bpUsage } = bp;
 
     const { result, usage } = await runSynthesis({
       inputText,
@@ -79,6 +89,8 @@ export async function POST(req: Request) {
       answers,
       blueprint,
       blueprintText,
+      groundingText: grounding.groundingText,
+      sources: grounding.sources,
       outputLang,
     });
 
@@ -95,6 +107,17 @@ export async function POST(req: Request) {
         masterPrompt: result.masterPrompt,
         outputLang,
       }),
+      grounding.usage
+        ? logUsage({
+            sessionId: sessionId || "unknown",
+            uid,
+            layer: "run",
+            model: grounding.usage.model,
+            inputTokens: grounding.usage.inputTokens,
+            outputTokens: grounding.usage.outputTokens,
+            latencyMs: grounding.usage.latencyMs,
+          })
+        : Promise.resolve(),
       logUsage({
         sessionId: sessionId || "unknown",
         uid,
@@ -130,6 +153,7 @@ export async function POST(req: Request) {
       masterPrompt: result.masterPrompt,
       assumptions: result.assumptions,
       editHint: result.editHint,
+      sources: result.sources,
     });
   } catch (err) {
     if (err instanceof LlmConfigError) {

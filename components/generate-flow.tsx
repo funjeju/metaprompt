@@ -22,6 +22,10 @@ interface ExtractedImagePrompt {
   label: string;
   prompt: string;
 }
+interface EngineSource {
+  url: string;
+  title: string;
+}
 interface GenerateResponse {
   routedModule: string;
   outputKind: "single" | "master";
@@ -30,6 +34,7 @@ interface GenerateResponse {
   masterPrompt: string;
   assumptions: string[];
   editHint: string;
+  sources: EngineSource[];
 }
 
 type Phase = "intent" | "questions" | "generating" | "result" | "error";
@@ -55,6 +60,7 @@ export function GenerateFlow() {
   // 답변: questionId -> 선택된 보기들(복수선택 지원). "기타"는 OTHER 마커로 저장.
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [otherText, setOtherText] = useState<Record<string, string>>({});
+  const [userMaterial, setUserMaterial] = useState("");
   const [outputLang, setOutputLang] = useState(locale);
   const [output, setOutput] = useState<GenerateResponse | null>(null);
   const [copied, setCopied] = useState(false);
@@ -207,6 +213,7 @@ export function GenerateFlow() {
             inputText,
             intentGuess: intentData.intentGuess,
             answers: buildAnswers(),
+            userMaterial,
             locale,
             outputLang: lang,
           }),
@@ -223,7 +230,7 @@ export function GenerateFlow() {
         setPhase("error");
       }
     },
-    [inputText, locale, te, buildAnswers],
+    [inputText, locale, te, buildAnswers, userMaterial],
   );
 
   // 마운트 시 1층 호출 (StrictMode 이중호출 가드).
@@ -365,6 +372,21 @@ export function GenerateFlow() {
             </fieldset>
           ))}
 
+          {/* 참고 자료(선택) — 있으면 최우선 근거로 사용 (RAG) */}
+          <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
+            <label className="text-sm font-medium text-ink">
+              {t("materialLabel")}
+            </label>
+            <p className="mt-0.5 text-xs text-muted">{t("materialDesc")}</p>
+            <textarea
+              value={userMaterial}
+              onChange={(e) => setUserMaterial(e.target.value)}
+              rows={3}
+              placeholder={t("materialPlaceholder")}
+              className="mt-2 w-full resize-none rounded-md border border-border bg-bg px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            />
+          </div>
+
           <div className="flex items-center justify-between gap-3 pt-1">
             <OutputLangSelect
               value={outputLang}
@@ -443,6 +465,29 @@ export function GenerateFlow() {
               💡 <span className="font-medium text-ink">{tr("editHint")}:</span>{" "}
               {output.editHint}
             </p>
+          )}
+
+          {/* 출처 (RAG grounding — 실시간 웹 검색) */}
+          {output.sources.length > 0 && (
+            <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
+              <p className="text-xs font-medium uppercase tracking-wide text-green">
+                🔎 {tr("sourcesLabel")}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {output.sources.map((s, i) => (
+                  <li key={i}>
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue underline underline-offset-2 hover:opacity-80"
+                    >
+                      {s.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {/* 한 단계 더 — 우리 사이트에서 바로 실행 (docs/04 4.2 step5) */}

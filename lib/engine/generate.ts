@@ -39,6 +39,10 @@ export interface RunSynthesisInput {
   answers: EngineAnswer[];
   blueprint: Blueprint;
   blueprintText: string;
+  /** RAG grounding 컨텍스트(검증된 최신 사실 + 유저 자료). */
+  groundingText: string;
+  /** 마스터에 표기/결과에 반환할 출처. */
+  sources: GenerateResult["sources"];
   /** 생성 프롬프트 언어 — UI 언어와 별개 (docs/04 4.4). */
   outputLang: Locale;
 }
@@ -51,13 +55,27 @@ export interface RunSynthesisOutput {
 export async function runSynthesis(
   input: RunSynthesisInput,
 ): Promise<RunSynthesisOutput> {
-  const { inputText, intentGuess, answers, blueprint, blueprintText, outputLang } =
-    input;
+  const {
+    inputText,
+    intentGuess,
+    answers,
+    blueprint,
+    blueprintText,
+    groundingText,
+    sources,
+    outputLang,
+  } = input;
 
   const usage = await callLLM({
     layer: "generate",
     system: synthesisSystemPrompt(outputLang),
-    user: synthesisUserPrompt(inputText, intentGuess, answers, blueprintText),
+    user: synthesisUserPrompt(
+      inputText,
+      intentGuess,
+      answers,
+      blueprintText,
+      groundingText,
+    ),
   });
 
   const raw = extractJson<RawSynthesis>(usage.text);
@@ -82,6 +100,7 @@ export async function runSynthesis(
       ? raw.assumptions.filter((a): a is string => typeof a === "string")
       : [],
     editHint: typeof raw.editHint === "string" ? raw.editHint.trim() : "",
+    sources,
   };
 
   return { result, usage };

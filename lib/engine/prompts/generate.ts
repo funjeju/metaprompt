@@ -39,7 +39,14 @@ export function synthesisSystemPrompt(outputLang: Locale): string {
   → 그 결과물을 최고 품질로 뽑는 직접 프롬프트 1개.
     primaryTarget=image면 이미지 모델용(피사체·구도·비율·스타일·조명·색감·네거티브)으로, text면 역할·맥락·제약·출력형식으로. 끝에 "되묻지 말고 바로 실행하라".
 
-[공통] 추상 표현 금지("좋게" ❌) → 구체 수치·규격·개수. 모르는 표준값은 (통상값 추정). 사용자가 안 준 사실은 (확인필요).
+[grounding 활용 — 중요]
+입력에 "검증된 최신 정보"(실시간 웹 검색 결과 + 유저 제공 자료)가 함께 온다. 이걸 적극 활용하라:
+- 그 사실들로 (확인필요)/(통상값 추정)을 가능한 한 실제 값으로 채운다. 단 grounding 에 없는 건 지어내지 말고 (확인필요) 유지.
+- 유저 제공 자료가 있으면 제품 고유 정보는 그걸 최우선 근거로.
+- master 의 경우 마스터 프롬프트 안에 "[검증된 최신 정보]" 섹션을 만들어 핵심 사실을 (출처 표기와 함께) 넣어, 다른 AI에 넣어 실행해도 그 사실을 근거로 쓰게 하라.
+- 확인된 사실에는 간단한 출처 표기를 남겨라.
+
+[공통] 추상 표현 금지("좋게" ❌) → 구체 수치·규격·개수. 모르는 표준값은 (통상값 추정). grounding·사용자 입력에 없는 사실은 (확인필요).
 
 [출력] 프롬프트 본문은 ${L}로. 아래 JSON만 출력(코드펜스·설명 금지):
 {
@@ -58,12 +65,16 @@ export function synthesisUserPrompt(
   intentGuess: string,
   answers: EngineAnswer[],
   blueprintText: string,
+  groundingText: string,
 ): string {
   const answerLines =
     answers.length > 0
       ? answers.map((a) => `- (${a.id}) ${a.value}`).join("\n")
       : "(답변 없음)";
-  return `# 설계도(blueprint)
+  return `# 검증된 최신 정보 (grounding — 적극 활용, 없는 건 지어내지 말 것)
+${groundingText || "(grounding 없음 — 일반 지식과 (확인필요)로 진행)"}
+
+# 설계도(blueprint)
 ${blueprintText}
 
 # 사용자 원본 입력

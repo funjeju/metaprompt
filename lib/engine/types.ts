@@ -58,12 +58,20 @@ export interface GenerateResult {
   /** 입력에 없어 자동 설정한 값들. (자동설정)/(확인필요) 원칙. */
   assumptions: string[];
   editHint: string;
+  /** RAG grounding 출처(실시간 web_search). 없으면 빈 배열. */
+  sources: EngineSource[];
 }
 
 /** 마스터 프롬프트를 실행했을 때 추출되는 이미지 생성 프롬프트(렌더용). */
 export interface ExtractedImagePrompt {
   label: string;
   prompt: string;
+}
+
+/** RAG grounding 출처 (실시간 web_search 인용). */
+export interface EngineSource {
+  url: string;
+  title: string;
 }
 
 // ── 설계도 (blueprint, 3-A) — 합성 단계로 넘기는 중간 산출 ─────────

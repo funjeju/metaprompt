@@ -19,6 +19,9 @@
     "otherPlaceholder": "Type your own",
     "back": "Back",
     "next": "Next",
+    "materialLabel": "Reference material (optional)",
+    "materialDesc": "Add your product/topic material as a URL or text to use as the top priority source. (Current facts are auto-fetched via live web search.)",
+    "materialPlaceholder": "e.g. product page URL, or your own product description/specs",
     "generate": "Generate prompt",
     "regenerate": "Regenerate",
     "restart": "Start over",
@@ -47,7 +50,8 @@
     "runHereTitle": "Get the result right here",
     "runHereDesc": "Paste this into any AI, or run it on our site to get the result and image prompts.",
     "runHere": "Run on our site",
-    "extractedImages": "{count} extracted image prompts — render each to an image"
+    "extractedImages": "{count} extracted image prompts — render each to an image",
+    "sourcesLabel": "Sources (verified live)"
   },
   "theme": {
     "light": "Light",
