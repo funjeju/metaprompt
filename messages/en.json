@@ -1,0 +1,112 @@
+{
+  "brand": {
+    "name": "PromptForge",
+    "tagline": "One line is enough. We craft the best practical prompt for your field."
+  },
+  "landing": {
+    "heading": "What do you want to create?",
+    "subheading": "Just write a line or two. A few taps and we'll deliver a ready-to-use prompt.",
+    "placeholder": "e.g. dumpling menu image / new product card news / investment report summary …",
+    "cta": "Get started",
+    "examples": "Try writing like this"
+  },
+  "flow": {
+    "intentBanner": "Here's what we understood",
+    "intentConfirm": "Right? Answer the questions below to make it more accurate.",
+    "questionStep": "{current} / {total}",
+    "otherOption": "Other: type your own",
+    "otherPlaceholder": "Type your own",
+    "back": "Back",
+    "next": "Next",
+    "generate": "Generate prompt",
+    "regenerate": "Regenerate",
+    "restart": "Start over",
+    "outputLang": "Output language",
+    "analyzing": "Analyzing your intent…",
+    "generating": "Crafting the best prompt…"
+  },
+  "result": {
+    "heading": "Your prompt",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "assumptions": "Auto-filled assumptions",
+    "editHint": "Make it even better"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again shortly.",
+    "emptyInput": "Tell us what you want to create first.",
+    "rateLimited": "You've used all free tries today. Sign in to use more."
+  },
+  "nav": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "history": "History",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Sign in to save your history and get more uses.",
+    "google": "Continue with Google",
+    "notConfigured": "Sign-in isn't configured yet (Firebase env required)."
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "theme": "Theme",
+    "language": "Language",
+    "logout": "Sign out"
+  },
+  "history": {
+    "title": "My history",
+    "empty": "No prompts yet. Create your first one."
+  },
+  "admin": {
+    "title": "Admin dashboard",
+    "access": "Access stats",
+    "usersSessions": "Users / Sessions",
+    "usageCost": "Usage / Cost",
+    "dau": "DAU",
+    "wau": "WAU",
+    "mau": "MAU",
+    "generates": "Generations",
+    "dailyActive": "Daily active users (last 14 days)",
+    "users": "Total users",
+    "sessions": "Total sessions",
+    "llmCalls": "LLM calls",
+    "tokens": "Total tokens",
+    "estCost": "Est. cost",
+    "estCostNote": "Estimate at public rates",
+    "avgLatency": "Avg latency",
+    "windowNote": "Window: last 30 days (up to 5,000 records).",
+    "notConfigured": "Firebase Admin isn't configured, so stats can't be shown.",
+    "empty": "No data.",
+    "nav": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "sessions": "Sessions",
+      "usage": "Usage"
+    },
+    "col": {
+      "email": "Email",
+      "name": "Name",
+      "role": "Role",
+      "plan": "Plan",
+      "lastLogin": "Last login",
+      "input": "Input",
+      "module": "Form",
+      "user": "User",
+      "createdAt": "Created",
+      "model": "Model",
+      "calls": "Calls",
+      "inTokens": "Input tokens",
+      "outTokens": "Output tokens",
+      "cost": "Est. cost"
+    }
+  }
+}

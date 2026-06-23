@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// docs/03 3.2 — sessions/usage_logs/access_logs 는 클라이언트 write 전면 금지(서버 Admin SDK 경유).
+// users 의 권한·과금 필드(role, planTier)는 본인도 수정 불가.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    match /users/{uid} {
+      allow read: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
+      // 본인만 write, 단 권한·과금 필드 자기수정 차단.
+      allow write: if isSignedIn() && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['role', 'planTier']);
+    }
+
+    match /sessions/{id} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false; // 서버 전용
+    }
+
+    match /usage_logs/{id} {
+      allow read: if isAdmin();
+      allow write: if false; // 서버 전용
+    }
+
+    match /access_logs/{id} {
+      allow read: if isAdmin();
+      allow write: if false; // 서버 전용
+    }
+  }
+}

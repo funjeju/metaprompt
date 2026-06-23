@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════════
+   디자인 토큰 — 단일 출처는 docs/06-design-system.md.
+   모든 색은 이 CSS 변수만 사용한다(raw hex 직접 입력 금지).
+   :root = 라이트, .dark = 다크 (Tailwind darkMode: "class").
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  /* surface */
+  --bg: #f2f2f2;
+  --surface: #ffffff;
+  --surface-2: #e9e9ef;
+  --border: #cfcfd3;
+  /* text */
+  --text: #20212e;
+  --text-muted: #919496;
+  --text-faint: #b0b3bd;
+  /* accents */
+  --accent: #ec807f;
+  --accent-grad-a: #ec807f;
+  --accent-grad-b: #ec997c;
+  --accent-tint: #e7bab2;
+  --blue: #707fd3;
+  --green: #59846d;
+  /* feedback */
+  --success: #59846d;
+  --warning: #ec997c;
+  --danger: #ec807f;
+
+  /* 시그니처 그라데이션 — 핵심 1~2곳에만 사용 */
+  --gradient-brand: linear-gradient(135deg, #ec807f 0%, #ec997c 100%);
+
+  /* radius */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* shadow */
+  --shadow-sm: 0 1px 2px rgba(32, 33, 46, 0.04);
+  --shadow-md: 0 4px 16px rgba(32, 33, 46, 0.06);
+  --shadow-lg: 0 12px 32px rgba(32, 33, 46, 0.08);
+
+  /* type */
+  --font-sans: "Pretendard", system-ui, sans-serif;
+}
+
+/* DESIGN: dark tentative — 다크 시안 수령 전 라이트 기반 설계안 (docs/06 6.3) */
+.dark {
+  --bg: #16171f;
+  --surface: #20212e;
+  --surface-2: #2a2c3a;
+  --border: #34374a;
+  --text: #f2f2f2;
+  --text-muted: #9a9dab;
+  --text-faint: #6b6e80;
+  --accent: #ec807f;
+  --accent-grad-a: #ec807f;
+  --accent-grad-b: #ec997c;
+  --accent-tint: #3a2e30;
+  --blue: #8a98e0;
+  --green: #6fa587;
+  --success: #6fa587;
+  --warning: #ec997c;
+  --danger: #ec807f;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.36);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* 숫자 메트릭 자릿수 정렬 (docs/06 6.5) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

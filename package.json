@@ -1,0 +1,32 @@
+{
+  "name": "promptforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "유저가 한두 줄만 입력하면 적응형 객관식 질문으로 의도를 추출해 최적 실전 프롬프트를 생성하는 멀티버티컬 SaaS",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "firebase": "^11.3.0",
+    "firebase-admin": "^13.1.0",
+    "next": "14.2.23",
+    "next-intl": "^3.26.3",
+    "next-themes": "^0.4.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.12",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  }
+}
