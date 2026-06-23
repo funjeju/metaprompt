@@ -51,7 +51,18 @@
     "runHereDesc": "이 프롬프트를 다른 AI에 넣어도 되고, 우리 사이트에서 바로 실행해 결과와 이미지 프롬프트를 받을 수도 있어요.",
     "runHere": "우리 사이트에서 실행",
     "extractedImages": "추출된 이미지 프롬프트 {count}개 — 각각 이미지로 생성할 수 있어요",
-    "sourcesLabel": "근거 출처 (실시간 확인)"
+    "sourcesLabel": "근거 출처 (실시간 확인)",
+    "publishTitle": "피드에 공유",
+    "publishLogin": "로그인하면 피드에 게시할 수 있어요.",
+    "publishLoginLink": "로그인",
+    "visFull": "전체 공개 (프롬프트 전문 공개)",
+    "visPartial": "일부 공개 (요약·앞부분만)",
+    "visPrivate": "비공개 (나만 저장)",
+    "publishImages": "생성한 이미지도 공개 (썸네일)",
+    "publish": "피드에 게시",
+    "publishing": "게시 중…",
+    "published": "게시했어요!",
+    "goFeed": "피드 보기"
   },
   "theme": {
     "light": "라이트",
@@ -68,7 +79,15 @@
     "logout": "로그아웃",
     "history": "내 기록",
     "settings": "설정",
-    "admin": "어드민"
+    "admin": "어드민",
+    "feed": "피드"
+  },
+  "feed": {
+    "title": "프롬프트 피드",
+    "subtitle": "사람들이 공유한 프롬프트와 결과물을 둘러보세요.",
+    "empty": "아직 공유된 글이 없어요. 첫 프롬프트를 게시해 보세요.",
+    "partial": "일부 공개",
+    "lockedTail": "전체 프롬프트는 비공개입니다"
   },
   "auth": {
     "title": "로그인",

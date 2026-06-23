@@ -51,7 +51,18 @@
     "runHereDesc": "Paste this into any AI, or run it on our site to get the result and image prompts.",
     "runHere": "Run on our site",
     "extractedImages": "{count} extracted image prompts — render each to an image",
-    "sourcesLabel": "Sources (verified live)"
+    "sourcesLabel": "Sources (verified live)",
+    "publishTitle": "Share to feed",
+    "publishLogin": "Sign in to publish to the feed.",
+    "publishLoginLink": "Sign in",
+    "visFull": "Public (full prompt)",
+    "visPartial": "Partial (summary + teaser only)",
+    "visPrivate": "Private (save for me)",
+    "publishImages": "Also share generated images (thumbnails)",
+    "publish": "Publish to feed",
+    "publishing": "Publishing…",
+    "published": "Published!",
+    "goFeed": "View feed"
   },
   "theme": {
     "light": "Light",
@@ -68,7 +79,15 @@
     "logout": "Sign out",
     "history": "History",
     "settings": "Settings",
-    "admin": "Admin"
+    "admin": "Admin",
+    "feed": "Feed"
+  },
+  "feed": {
+    "title": "Prompt feed",
+    "subtitle": "Browse prompts and results people have shared.",
+    "empty": "Nothing shared yet. Be the first to publish a prompt.",
+    "partial": "Partial",
+    "lockedTail": "Full prompt is private"
   },
   "auth": {
     "title": "Sign in",

@@ -1,8 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { useAuth } from "@/components/auth-provider";
+
+// 데이터 URL을 캔버스로 축소해 썸네일 JPEG로 변환(피드 저장용).
+async function makeThumb(dataUrl: string, max = 420): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
 // ── API 응답 타입 (docs/02 2.4) ──────────────────────────────────
 interface Question {
@@ -76,6 +99,15 @@ export function GenerateFlow() {
   const [images, setImages] = useState<Record<number, string>>({});
   const [imgBusy, setImgBusy] = useState<Record<number, boolean>>({});
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  // 피드 게시
+  const { user, configured } = useAuth();
+  const [visibility, setVisibility] = useState<
+    "public_full" | "public_partial" | "private"
+  >("public_full");
+  const [includeImages, setIncludeImages] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
 
   const startedRef = useRef(false);
 
@@ -168,6 +200,42 @@ export function GenerateFlow() {
       setRunning(false);
     }
   }, [output, outputLang, intent, te, renderImage]);
+
+  // 피드에 게시(저장). 공개 이미지는 썸네일로 축소해 함께 저장.
+  const publish = useCallback(async () => {
+    if (!output) return;
+    setPublishing(true);
+    try {
+      let thumbnails: string[] = [];
+      if (includeImages && visibility !== "private") {
+        const rendered = Object.values(images).filter((v) =>
+          v?.startsWith("data:image"),
+        );
+        thumbnails = await Promise.all(rendered.map((d) => makeThumb(d)));
+      }
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          masterPrompt: output.masterPrompt,
+          summary: output.summary,
+          routedModule: output.routedModule,
+          outputKind: output.outputKind,
+          visibility,
+          thumbnails,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || te("generic"));
+      }
+      setPublished(true);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : te("generic"));
+    } finally {
+      setPublishing(false);
+    }
+  }, [output, includeImages, visibility, images, te]);
 
   // 보기 선택 토글. 단일선택이면 교체, 복수선택이면 추가/제거.
   const toggleOption = useCallback(
@@ -573,6 +641,77 @@ export function GenerateFlow() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* 피드에 게시 (공개 설정) */}
+          <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
+            <p className="text-sm font-medium text-ink">{tr("publishTitle")}</p>
+            {configured && !user ? (
+              <p className="mt-2 text-sm text-muted">
+                {tr("publishLogin")}{" "}
+                <Link
+                  href="/login?next=/generate"
+                  className="text-accent underline underline-offset-2"
+                >
+                  {tr("publishLoginLink")}
+                </Link>
+              </p>
+            ) : published ? (
+              <p className="mt-2 text-sm text-green">
+                {tr("published")}{" "}
+                <Link
+                  href="/feed"
+                  className="text-accent underline underline-offset-2"
+                >
+                  {tr("goFeed")}
+                </Link>
+              </p>
+            ) : (
+              <>
+                <div className="mt-3 flex flex-col gap-2">
+                  {(
+                    [
+                      ["public_full", tr("visFull")],
+                      ["public_partial", tr("visPartial")],
+                      ["private", tr("visPrivate")],
+                    ] as const
+                  ).map(([v, label]) => (
+                    <label
+                      key={v}
+                      className="flex items-center gap-2 text-sm text-ink"
+                    >
+                      <input
+                        type="radio"
+                        name="visibility"
+                        checked={visibility === v}
+                        onChange={() => setVisibility(v)}
+                        className="accent-accent"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                  {Object.keys(images).length > 0 && visibility !== "private" && (
+                    <label className="mt-1 flex items-center gap-2 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        checked={includeImages}
+                        onChange={(e) => setIncludeImages(e.target.checked)}
+                        className="accent-accent"
+                      />
+                      {tr("publishImages")}
+                    </label>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={publishing || !configured}
+                  onClick={publish}
+                  className="mt-3 rounded-pill bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                >
+                  {publishing ? tr("publishing") : tr("publish")}
+                </button>
+              </>
             )}
           </div>
 

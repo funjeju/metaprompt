@@ -8,6 +8,7 @@ import { AccountMenu } from "./account-menu";
 
 export function SiteHeader() {
   const t = useTranslations("brand");
+  const tn = useTranslations("nav");
   return (
     <header className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-4">
       <Link href="/" className="flex items-center gap-2">
@@ -17,6 +18,12 @@ export function SiteHeader() {
         </span>
       </Link>
       <div className="flex items-center gap-2">
+        <Link
+          href="/feed"
+          className="rounded-pill px-3 py-1.5 text-sm font-medium text-muted transition hover:text-ink"
+        >
+          {tn("feed")}
+        </Link>
         <LanguageToggle />
         <ThemeToggle />
         <AccountMenu />
