@@ -42,9 +42,16 @@ export function synthesisSystemPrompt(outputLang: Locale): string {
    9) 정량·구체 표현 강제(추상어 금지), 사실 날조 금지((확인필요)/(통상값 추정)).
    10) 마스터 프롬프트 본문 안에도 "되묻지 말고 바로 실행하라" 규칙.
 
-■ blueprint.outputKind = "single" (이미지 1장/짧은 글/가사 등)
+■ blueprint.outputKind = "single" (이미지 1장/짧은 글/노래 등)
   → 그 결과물을 최고 품질로 뽑는 직접 프롬프트 1개.
     primaryTarget=image면 이미지 모델용(피사체·구도·비율·스타일·조명·색감·네거티브)으로, text면 역할·맥락·제약·출력형식으로. 끝에 "되묻지 말고 바로 실행하라".
+
+  ▶ 음악/노래(primaryTarget=audio, Suno 등 음악 생성 도구): masterPrompt 를 아래 3블록으로 **명확히 분리**해 작성하라.
+     [STYLE] (Suno 'Style of Music' 입력용) — 장르·무드·보컬 타입·악기·템포(BPM)·프로덕션 톤을 영어 키워드 중심으로.
+       ⚠ 이 STYLE 블록은 **반드시 1000자 이내** (Suno 스타일 입력 글자수 제한). 넘칠 것 같으면 핵심 키워드만 압축하고 군더더기 제거.
+     [LYRICS] — 섹션 태그([Intro][Verse][Chorus][Bridge][Outro] 등)로 구조화한 가사.
+     [TITLE] — 곡 제목 1개.
+     세 블록의 라벨([STYLE]/[LYRICS]/[TITLE])을 그대로 두어 사용자가 Suno의 각 칸에 따로 붙여넣을 수 있게 하라.
 
 [grounding 활용 — 중요]
 입력에 "검증된 최신 정보"(실시간 웹 검색 결과 + 유저 제공 자료)가 함께 온다. 이걸 적극 활용하라:

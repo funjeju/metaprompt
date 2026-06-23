@@ -561,7 +561,11 @@ export function GenerateFlow() {
             </div>
           )}
 
-          {/* 한 단계 더 — 우리 사이트에서 바로 실행 (docs/04 4.2 step5) */}
+          {/* 한 단계 더 — 우리 사이트에서 바로 실행 (master, 또는 텍스트/이미지 단일만).
+              음악(audio) 등은 우리 사이트에서 생성 불가 → 프롬프트만 제공(블록 숨김). */}
+          {(output.outputKind === "master" ||
+            output.primaryTarget === "text" ||
+            output.primaryTarget === "image") && (
           <div className="rounded-lg border border-accent/40 bg-surface p-5 shadow-card">
             <p className="text-sm font-medium text-ink">{tr("runHereTitle")}</p>
             <p className="mt-1 text-xs text-muted">{tr("runHereDesc")}</p>
@@ -643,6 +647,7 @@ export function GenerateFlow() {
               </div>
             )}
           </div>
+          )}
 
           {/* 피드에 게시 (공개 설정) */}
           <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
