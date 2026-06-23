@@ -75,18 +75,19 @@ export function GenerateFlow() {
   // 이미지 렌더 상태 (index -> dataURL / busy). index -1 = single 이미지.
   const [images, setImages] = useState<Record<number, string>>({});
   const [imgBusy, setImgBusy] = useState<Record<number, boolean>>({});
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const startedRef = useRef(false);
 
-  // 이미지 프롬프트 1건 렌더 (/api/render).
+  // 이미지 프롬프트 1건 렌더 (/api/render). size 기본 세로형(상세페이지/카드 섹션).
   const renderImage = useCallback(
-    async (idx: number, prompt: string) => {
+    async (idx: number, prompt: string, size: string = "1024x1536") => {
       setImgBusy((b) => ({ ...b, [idx]: true }));
       try {
         const res = await fetch("/api/render", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, sessionId: intent?.sessionId }),
+          body: JSON.stringify({ prompt, size, sessionId: intent?.sessionId }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -523,7 +524,8 @@ export function GenerateFlow() {
               <img
                 src={images[-1]}
                 alt="result"
-                className="mt-4 w-full max-w-sm rounded-md border border-border"
+                onClick={() => setLightbox(images[-1])}
+                className="mt-4 w-full max-w-sm cursor-zoom-in rounded-md border border-border"
               />
             )}
 
@@ -564,7 +566,8 @@ export function GenerateFlow() {
                       <img
                         src={images[idx]}
                         alt={ip.label}
-                        className="mt-2 w-full max-w-sm rounded-md border border-border"
+                        onClick={() => setLightbox(images[idx])}
+                        className="mt-2 w-full max-w-sm cursor-zoom-in rounded-md border border-border"
                       />
                     )}
                   </div>
@@ -605,6 +608,23 @@ export function GenerateFlow() {
           >
             {t("restart")}
           </button>
+        </div>
+      )}
+
+      {/* 이미지 확대 라이트박스 */}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox}
+            alt="enlarged"
+            className="max-h-full max-w-full rounded-md object-contain"
+          />
         </div>
       )}
     </div>

@@ -169,24 +169,30 @@ export async function webSearchGround(query: string): Promise<WebSearchResult> {
 }
 
 // ── 이미지 생성 (결과물 바로 보기 — target=image 렌더) ──────────────
-// DECISION: 기본 gpt-image-1-mini (2026-06 최저가, 카드당 ~$0.005). env LLM_MODEL_IMAGE 로 교체.
+// DECISION: 테스트 단계 — gpt-image-2 quality=low (한글 텍스트/디자인 컷 대응, 저비용 티어).
+//   env LLM_MODEL_IMAGE / LLM_MODEL_IMAGE_QUALITY 로 교체.
 export interface ImageResult {
   b64: string;
   model: string;
   latencyMs: number;
 }
 
+type ImageQuality = "low" | "medium" | "high" | "auto";
+
 export async function generateImage(
   prompt: string,
   opts?: { size?: "1024x1024" | "1024x1536" | "1536x1024" | "auto" },
 ): Promise<ImageResult> {
-  const model = process.env.LLM_MODEL_IMAGE?.trim() || "gpt-image-1-mini";
+  const model = process.env.LLM_MODEL_IMAGE?.trim() || "gpt-image-2";
+  const quality = (process.env.LLM_MODEL_IMAGE_QUALITY?.trim() ||
+    "low") as ImageQuality;
   const openai = getClient();
   const startedAt = Date.now();
   const res = await openai.images.generate({
     model,
     prompt,
     size: opts?.size ?? "1024x1024",
+    quality,
     n: 1,
   });
   return {
