@@ -24,19 +24,7 @@ function asTarget(v: unknown): PromptTarget {
 }
 
 function sanitizeBlueprint(raw: Record<string, unknown>): Blueprint {
-  const outputKind = raw.outputKind === "package" ? "package" : "single";
-
-  let promptSpecs = Array.isArray(raw.promptSpecs)
-    ? raw.promptSpecs
-        .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
-        .map((s) => ({
-          label: typeof s.label === "string" ? s.label : "프롬프트",
-          target: asTarget(s.target),
-        }))
-    : [];
-  if (promptSpecs.length === 0) {
-    promptSpecs = [{ label: "프롬프트", target: "text" }];
-  }
+  const outputKind = raw.outputKind === "master" ? "master" : "single";
 
   const strArr = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
@@ -57,8 +45,8 @@ function sanitizeBlueprint(raw: Record<string, unknown>): Blueprint {
         ? raw.outputForm.trim()
         : "generic",
     outputKind,
+    primaryTarget: asTarget(raw.primaryTarget),
     unitPlan,
-    promptSpecs,
     experts: strArr(raw.experts),
     successCriteria: strArr(raw.successCriteria),
     quantSpecs: strArr(raw.quantSpecs),

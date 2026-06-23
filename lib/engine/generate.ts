@@ -9,7 +9,6 @@ import type {
   EngineAnswer,
   GenerateResult,
   Locale,
-  PromptItem,
   PromptTarget,
 } from "./types";
 
@@ -27,8 +26,9 @@ const asTarget = (v: unknown): PromptTarget =>
 interface RawSynthesis {
   routedModule?: unknown;
   outputKind?: unknown;
+  primaryTarget?: unknown;
   summary?: unknown;
-  prompts?: unknown;
+  masterPrompt?: unknown;
   assumptions?: unknown;
   editHint?: unknown;
 }
@@ -62,20 +62,10 @@ export async function runSynthesis(
 
   const raw = extractJson<RawSynthesis>(usage.text);
 
-  const prompts: PromptItem[] = Array.isArray(raw.prompts)
-    ? raw.prompts
-        .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
-        .map((p, i) => ({
-          id: typeof p.id === "string" && p.id.trim() ? p.id.trim() : `p${i + 1}`,
-          label: typeof p.label === "string" ? p.label : `프롬프트 ${i + 1}`,
-          target: asTarget(p.target),
-          prompt: typeof p.prompt === "string" ? p.prompt.trim() : "",
-        }))
-        .filter((p) => p.prompt)
-    : [];
-
   const outputKind =
-    raw.outputKind === "package" || prompts.length > 1 ? "package" : "single";
+    raw.outputKind === "master" || blueprint.outputKind === "master"
+      ? "master"
+      : "single";
 
   const result: GenerateResult = {
     routedModule:
@@ -83,8 +73,11 @@ export async function runSynthesis(
         ? raw.routedModule.trim()
         : blueprint.outputForm,
     outputKind,
+    primaryTarget:
+      outputKind === "master" ? "text" : asTarget(raw.primaryTarget ?? blueprint.primaryTarget),
     summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
-    prompts,
+    masterPrompt:
+      typeof raw.masterPrompt === "string" ? raw.masterPrompt.trim() : "",
     assumptions: Array.isArray(raw.assumptions)
       ? raw.assumptions.filter((a): a is string => typeof a === "string")
       : [],

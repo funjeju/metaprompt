@@ -44,29 +44,41 @@ export interface PromptItem {
 export interface GenerateResult {
   /** 런타임에 정밀 판별한 결과물 형태(예: card_news, detail_page, single_image, ppt_script, song). */
   routedModule: string;
-  /** 단일 프롬프트인지, 멀티에셋 패키지인지. */
-  outputKind: "single" | "package";
-  /** 이 패키지가 무엇인지 한 줄 요약(사용 안내). */
+  /**
+   * single = 직접 프롬프트 1개(단순 이미지/짧은 글). 실행하면 결과물이 바로 나옴.
+   * master = 메타프롬프트 1개(복합/멀티에셋). 실행하면 그때 섹션별 이미지 프롬프트 등을 뱉어냄.
+   */
+  outputKind: "single" | "master";
+  /** single일 때 이 프롬프트를 넣을 도구(렌더 가능 여부 판단). master는 보통 text. */
+  primaryTarget: PromptTarget;
+  /** 산출물이 무엇이고 어떻게 쓰는지 한 줄 안내. */
   summary: string;
-  /** 항상 배열. single이면 길이 1. */
-  prompts: PromptItem[];
+  /** ⭐ 산출물 본체 — 사용자가 복사해 어디서나 쓰는 프롬프트(마스터 또는 단일). */
+  masterPrompt: string;
   /** 입력에 없어 자동 설정한 값들. (자동설정)/(확인필요) 원칙. */
   assumptions: string[];
   editHint: string;
 }
 
+/** 마스터 프롬프트를 실행했을 때 추출되는 이미지 생성 프롬프트(렌더용). */
+export interface ExtractedImagePrompt {
+  label: string;
+  prompt: string;
+}
+
 // ── 설계도 (blueprint, 3-A) — 합성 단계로 넘기는 중간 산출 ─────────
 export interface Blueprint {
   outputForm: string;
-  outputKind: "single" | "package";
-  /** 멀티에셋일 때 단위 계획(카드/슬라이드/섹션 수 등). */
+  /** single = 직접 프롬프트, master = 메타프롬프트(복합/멀티에셋). */
+  outputKind: "single" | "master";
+  /** single일 때 도구 종류. */
+  primaryTarget: PromptTarget;
+  /** 멀티에셋일 때 단위 계획(카드/슬라이드/섹션 수 등) — 마스터 프롬프트가 이 구조를 지시한다. */
   unitPlan?: {
     unit: string;
     count: number;
     perUnitChecklist: string[];
   };
-  /** 패키지에 포함될 프롬프트 항목 사양(라벨 + target). 합성이 이걸 채운다. */
-  promptSpecs: { label: string; target: PromptTarget }[];
   experts: string[];
   successCriteria: string[];
   quantSpecs: string[];

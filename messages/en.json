@@ -40,7 +40,14 @@
     "afterLabel": "With optimized prompt",
     "packageBadge": "{count} prompts",
     "runItem": "Run this prompt",
-    "renderImage": "Generate image"
+    "renderImage": "Generate image",
+    "masterBadge": "Master prompt",
+    "masterLabel": "Master prompt (use anywhere)",
+    "promptLabel": "Your prompt",
+    "runHereTitle": "Get the result right here",
+    "runHereDesc": "Paste this into any AI, or run it on our site to get the result and image prompts.",
+    "runHere": "Run on our site",
+    "extractedImages": "{count} extracted image prompts — render each to an image"
   },
   "theme": {
     "light": "Light",

@@ -40,7 +40,14 @@
     "afterLabel": "최적화된 프롬프트로",
     "packageBadge": "프롬프트 {count}개",
     "runItem": "이 프롬프트 실행",
-    "renderImage": "이미지 생성"
+    "renderImage": "이미지 생성",
+    "masterBadge": "마스터 프롬프트",
+    "masterLabel": "마스터 프롬프트 (어디서나 사용)",
+    "promptLabel": "완성된 프롬프트",
+    "runHereTitle": "여기서 바로 결과 만들기",
+    "runHereDesc": "이 프롬프트를 다른 AI에 넣어도 되고, 우리 사이트에서 바로 실행해 결과와 이미지 프롬프트를 받을 수도 있어요.",
+    "runHere": "우리 사이트에서 실행",
+    "extractedImages": "추출된 이미지 프롬프트 {count}개 — 각각 이미지로 생성할 수 있어요"
   },
   "theme": {
     "light": "라이트",

@@ -6,5 +6,10 @@ export {
   type RunSynthesisInput,
   type RunSynthesisOutput,
 } from "./generate";
-export { runPrompt, type RunPromptOutput } from "./run";
+export {
+  runPrompt,
+  type RunPromptOutput,
+  runMaster,
+  type RunMasterOutput,
+} from "./run";
 export { extractJson, JsonParseError } from "./json";

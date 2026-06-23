@@ -82,7 +82,7 @@ export async function POST(req: Request) {
       outputLang,
     });
 
-    if (result.prompts.length === 0) {
+    if (!result.masterPrompt) {
       return jsonError("프롬프트 생성에 실패했습니다.", 502, "empty_output");
     }
 
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
         answers,
         routedModule: result.routedModule,
         outputKind: result.outputKind,
-        prompts: result.prompts,
+        masterPrompt: result.masterPrompt,
         outputLang,
       }),
       logUsage({
@@ -125,8 +125,9 @@ export async function POST(req: Request) {
     return NextResponse.json({
       routedModule: result.routedModule,
       outputKind: result.outputKind,
+      primaryTarget: result.primaryTarget,
       summary: result.summary,
-      prompts: result.prompts,
+      masterPrompt: result.masterPrompt,
       assumptions: result.assumptions,
       editHint: result.editHint,
     });

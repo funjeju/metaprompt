@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runPrompt } from "@/lib/engine";
+import { runPrompt, runMaster } from "@/lib/engine";
 import { isLlmConfigured, LlmConfigError } from "@/lib/llm";
 import { logUsage, logAccess, hashIp } from "@/lib/logging";
 import { checkGuestRateLimit } from "@/lib/ratelimit";
@@ -7,9 +7,10 @@ import { getSessionUser } from "@/lib/firebase/server-auth";
 import { clientCountry, clientIp, jsonError, normalizeLocale } from "@/lib/http";
 
 export const runtime = "nodejs";
+export const maxDuration = 60; // 마스터 실행은 길어질 수 있음
 
-// POST /api/run — 프롬프트를 실제 실행해 결과물을 만든다 (결과물 바로 보기 / Before·After).
-const MAX_PROMPT_LEN = 8000;
+// POST /api/run — 프롬프트를 실제 실행 (mode=single 평문 / mode=master 마스터 실행→결과+이미지프롬프트).
+const MAX_PROMPT_LEN = 16000;
 
 export async function POST(req: Request) {
   if (!isLlmConfigured()) {
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
 
   let body: {
     prompt?: unknown;
+    mode?: unknown;
     outputLang?: unknown;
     locale?: unknown;
     sessionId?: unknown;
@@ -33,6 +35,7 @@ export async function POST(req: Request) {
   if (!prompt) {
     return jsonError("prompt 가 비어 있습니다.", 400, "empty_prompt");
   }
+  const mode = body.mode === "master" ? "master" : "single";
   const outputLang = normalizeLocale(body.outputLang ?? body.locale);
   const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
 
@@ -48,7 +51,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { result, usage } = await runPrompt(prompt, outputLang);
+    const { result, usage, imagePrompts } =
+      mode === "master"
+        ? await runMaster(prompt, outputLang)
+        : { ...(await runPrompt(prompt, outputLang)), imagePrompts: undefined };
+
     if (!result) {
       return jsonError("결과물 생성에 실패했습니다.", 502, "empty_output");
     }
@@ -72,7 +79,9 @@ export async function POST(req: Request) {
       }),
     ]);
 
-    return NextResponse.json({ result });
+    return NextResponse.json(
+      mode === "master" ? { result, imagePrompts: imagePrompts ?? [] } : { result },
+    );
   } catch (err) {
     if (err instanceof LlmConfigError) {
       return jsonError(err.message, 503, "llm_unconfigured");

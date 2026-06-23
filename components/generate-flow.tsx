@@ -18,17 +18,16 @@ interface IntentResponse {
   questions: Question[];
 }
 type PromptTarget = "text" | "image" | "audio" | "video" | "code" | "other";
-interface PromptItem {
-  id: string;
+interface ExtractedImagePrompt {
   label: string;
-  target: PromptTarget;
   prompt: string;
 }
 interface GenerateResponse {
   routedModule: string;
-  outputKind: "single" | "package";
+  outputKind: "single" | "master";
+  primaryTarget: PromptTarget;
   summary: string;
-  prompts: PromptItem[];
+  masterPrompt: string;
   assumptions: string[];
   editHint: string;
 }
@@ -58,112 +57,109 @@ export function GenerateFlow() {
   const [otherText, setOtherText] = useState<Record<string, string>>({});
   const [outputLang, setOutputLang] = useState(locale);
   const [output, setOutput] = useState<GenerateResponse | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  // 프롬프트 항목별 실행/렌더 상태 (id -> 값)
-  const [textResults, setTextResults] = useState<Record<string, string>>({});
-  const [images, setImages] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState<Record<string, boolean>>({});
-
-  // Before/After 비교 (대표 텍스트 프롬프트 기준)
+  // 마스터 실행 결과 (우리 사이트에서 결과 만들기)
   const [running, setRunning] = useState(false);
-  const [showCompare, setShowCompare] = useState(false);
-  const [beforeResult, setBeforeResult] = useState<string | null>(null);
-  const [afterResult, setAfterResult] = useState<string | null>(null);
+  const [masterResult, setMasterResult] = useState<string | null>(null);
+  const [imagePrompts, setImagePrompts] = useState<ExtractedImagePrompt[]>([]);
+  // single 텍스트 결과
+  const [singleResult, setSingleResult] = useState<string | null>(null);
+  // 이미지 렌더 상태 (index -> dataURL / busy). index -1 = single 이미지.
+  const [images, setImages] = useState<Record<number, string>>({});
+  const [imgBusy, setImgBusy] = useState<Record<number, boolean>>({});
 
   const startedRef = useRef(false);
 
-  // 텍스트 프롬프트 1건 실행 (/api/run).
-  const runOne = useCallback(
-    async (prompt: string): Promise<string> => {
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, outputLang, sessionId: intent?.sessionId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || te("generic"));
-      }
-      const data: { result: string } = await res.json();
-      return data.result;
-    },
-    [outputLang, intent, te],
-  );
-
-  // 항목별 텍스트 실행.
-  const runItem = useCallback(
-    async (item: PromptItem) => {
-      setBusy((b) => ({ ...b, [item.id]: true }));
-      try {
-        const r = await runOne(item.prompt);
-        setTextResults((t) => ({ ...t, [item.id]: r }));
-      } catch (err) {
-        setTextResults((t) => ({
-          ...t,
-          [item.id]: err instanceof Error ? err.message : te("generic"),
-        }));
-      } finally {
-        setBusy((b) => ({ ...b, [item.id]: false }));
-      }
-    },
-    [runOne, te],
-  );
-
-  // 항목별 이미지 렌더 (/api/render).
-  const renderItem = useCallback(
-    async (item: PromptItem) => {
-      setBusy((b) => ({ ...b, [item.id]: true }));
+  // 이미지 프롬프트 1건 렌더 (/api/render).
+  const renderImage = useCallback(
+    async (idx: number, prompt: string) => {
+      setImgBusy((b) => ({ ...b, [idx]: true }));
       try {
         const res = await fetch("/api/render", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: item.prompt, sessionId: intent?.sessionId }),
+          body: JSON.stringify({ prompt, sessionId: intent?.sessionId }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || te("generic"));
         }
         const data: { image: string } = await res.json();
-        setImages((im) => ({ ...im, [item.id]: data.image }));
+        setImages((im) => ({ ...im, [idx]: data.image }));
       } catch (err) {
-        setTextResults((t) => ({
-          ...t,
-          [item.id]: err instanceof Error ? err.message : te("generic"),
-        }));
+        alert(err instanceof Error ? err.message : te("generic"));
       } finally {
-        setBusy((b) => ({ ...b, [item.id]: false }));
+        setImgBusy((b) => ({ ...b, [idx]: false }));
       }
     },
     [intent, te],
   );
 
-  // "Before/After 비교" — 원본 입력 그대로 vs 대표 텍스트 프롬프트.
-  const primaryTextPrompt =
-    output?.prompts.find((p) => p.target === "text")?.prompt ??
-    output?.prompts[0]?.prompt ??
-    "";
-  const runCompare = useCallback(async () => {
-    if (!primaryTextPrompt) return;
-    setShowCompare(true);
+  // 마스터 프롬프트를 우리 사이트에서 실행 → 결과 + 이미지 프롬프트 추출.
+  const runMasterFlow = useCallback(async () => {
+    if (!output) return;
     setRunning(true);
-    setBeforeResult(null);
-    setAfterResult(null);
+    setMasterResult(null);
+    setImagePrompts([]);
+    setImages({});
     try {
-      const [before, after] = await Promise.all([
-        runOne(inputText),
-        runOne(primaryTextPrompt),
-      ]);
-      setBeforeResult(before);
-      setAfterResult(after);
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: output.masterPrompt,
+          mode: "master",
+          outputLang,
+          sessionId: intent?.sessionId,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || te("generic"));
+      }
+      const data: { result: string; imagePrompts: ExtractedImagePrompt[] } =
+        await res.json();
+      setMasterResult(data.result);
+      setImagePrompts(data.imagePrompts ?? []);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : te("generic");
-      setBeforeResult((b) => b ?? msg);
-      setAfterResult((a) => a ?? msg);
+      setMasterResult(err instanceof Error ? err.message : te("generic"));
     } finally {
       setRunning(false);
     }
-  }, [primaryTextPrompt, runOne, inputText, te]);
+  }, [output, outputLang, intent, te]);
+
+  // single(직접) 프롬프트 실행: 이미지면 렌더, 그 외엔 텍스트 실행.
+  const runSingle = useCallback(async () => {
+    if (!output) return;
+    if (output.primaryTarget === "image") {
+      await renderImage(-1, output.masterPrompt);
+      return;
+    }
+    setRunning(true);
+    setSingleResult(null);
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: output.masterPrompt,
+          outputLang,
+          sessionId: intent?.sessionId,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || te("generic"));
+      }
+      const data: { result: string } = await res.json();
+      setSingleResult(data.result);
+    } catch (err) {
+      setSingleResult(err instanceof Error ? err.message : te("generic"));
+    } finally {
+      setRunning(false);
+    }
+  }, [output, outputLang, intent, te, renderImage]);
 
   // 보기 선택 토글. 단일선택이면 교체, 복수선택이면 추가/제거.
   const toggleOption = useCallback(
@@ -276,11 +272,12 @@ export function GenerateFlow() {
       return true;
     }) ?? false;
 
-  async function copyText(text: string, id: string) {
+  async function copyMaster() {
+    if (!output) return;
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1800);
+      await navigator.clipboard.writeText(output.masterPrompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     } catch {
       /* clipboard 거부 시 무시 */
     }
@@ -396,9 +393,9 @@ export function GenerateFlow() {
               <span className="rounded-pill bg-surface-2 px-2.5 py-0.5 text-xs text-muted">
                 {output.routedModule}
               </span>
-              {output.outputKind === "package" && (
+              {output.outputKind === "master" && (
                 <span className="rounded-pill bg-accent-tint px-2.5 py-0.5 text-xs text-accent">
-                  {tr("packageBadge", { count: output.prompts.length })}
+                  {tr("masterBadge")}
                 </span>
               )}
             </div>
@@ -407,70 +404,26 @@ export function GenerateFlow() {
             )}
           </div>
 
-          {/* 프롬프트 항목들 */}
-          {output.prompts.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-lg border border-border bg-surface p-5 shadow-card"
-            >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-ink">{item.label}</span>
-                  <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">
-                    {item.target}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => copyText(item.prompt, item.id)}
-                  className="shrink-0 rounded-pill bg-accent px-4 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
-                >
-                  {copiedId === item.id ? tr("copied") : tr("copy")}
-                </button>
-              </div>
-              <pre className="whitespace-pre-wrap break-words rounded-md bg-bg p-4 text-sm leading-relaxed text-ink">
-                {item.prompt}
-              </pre>
-
-              {/* 항목별 실행 / 렌더 */}
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {item.target === "image" ? (
-                  <button
-                    type="button"
-                    disabled={busy[item.id]}
-                    onClick={() => renderItem(item)}
-                    className="rounded-pill bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-card transition hover:opacity-90 disabled:opacity-50"
-                  >
-                    🖼 {tr("renderImage")}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busy[item.id]}
-                    onClick={() => runItem(item)}
-                    className="rounded-pill bg-brand px-4 py-1.5 text-xs font-semibold text-white shadow-card transition hover:opacity-90 disabled:opacity-50"
-                  >
-                    ✨ {tr("runItem")}
-                  </button>
-                )}
-                {busy[item.id] && <Spinner />}
-              </div>
-
-              {images[item.id] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={images[item.id]}
-                  alt={item.label}
-                  className="mt-3 w-full max-w-sm rounded-md border border-border"
-                />
-              )}
-              {textResults[item.id] && (
-                <pre className="mt-3 whitespace-pre-wrap break-words rounded-md bg-bg p-4 text-sm leading-relaxed text-ink">
-                  {textResults[item.id]}
-                </pre>
-              )}
+          {/* ⭐ 마스터/단일 프롬프트 — 산출물 본체 (복사해 어디서나 사용) */}
+          <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-ink">
+                {output.outputKind === "master"
+                  ? tr("masterLabel")
+                  : tr("promptLabel")}
+              </span>
+              <button
+                type="button"
+                onClick={copyMaster}
+                className="shrink-0 rounded-pill bg-accent px-4 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+              >
+                {copied ? tr("copied") : tr("copy")}
+              </button>
             </div>
-          ))}
+            <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded-md bg-bg p-4 text-sm leading-relaxed text-ink">
+              {output.masterPrompt}
+            </pre>
+          </div>
 
           {output.assumptions.length > 0 && (
             <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
@@ -492,43 +445,86 @@ export function GenerateFlow() {
             </p>
           )}
 
-          {/* Before/After 비교 (대표 텍스트 프롬프트, docs/04 4.2 step5) */}
-          {primaryTextPrompt && (
+          {/* 한 단계 더 — 우리 사이트에서 바로 실행 (docs/04 4.2 step5) */}
+          <div className="rounded-lg border border-accent/40 bg-surface p-5 shadow-card">
+            <p className="text-sm font-medium text-ink">{tr("runHereTitle")}</p>
+            <p className="mt-1 text-xs text-muted">{tr("runHereDesc")}</p>
             <button
               type="button"
               disabled={running}
-              onClick={runCompare}
-              className="self-start rounded-pill border border-border bg-surface px-5 py-2.5 text-sm font-medium text-ink transition hover:border-accent disabled:opacity-50"
+              onClick={output.outputKind === "master" ? runMasterFlow : runSingle}
+              className="mt-3 rounded-pill bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-card transition hover:opacity-90 disabled:opacity-50"
             >
-              {tr("compare")}
+              ✨ {tr("runHere")}
             </button>
-          )}
-          {running && (
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Spinner />
-              {tr("running")}
-            </div>
-          )}
-          {showCompare && !running && (beforeResult || afterResult) && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-faint">
-                  {tr("beforeLabel")}
-                </p>
-                <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">
-                  {beforeResult}
-                </pre>
+            {running && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted">
+                <Spinner />
+                {tr("running")}
               </div>
-              <div className="rounded-lg border border-accent bg-surface p-5 shadow-card">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-accent">
-                  {tr("afterLabel")}
+            )}
+
+            {/* single 텍스트 결과 */}
+            {singleResult && !running && (
+              <pre className="mt-4 whitespace-pre-wrap break-words rounded-md bg-bg p-4 text-sm leading-relaxed text-ink">
+                {singleResult}
+              </pre>
+            )}
+            {/* single 이미지 결과 */}
+            {images[-1] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={images[-1]}
+                alt="result"
+                className="mt-4 w-full max-w-sm rounded-md border border-border"
+              />
+            )}
+
+            {/* master 실행 결과 */}
+            {masterResult && !running && (
+              <pre className="mt-4 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-bg p-4 text-sm leading-relaxed text-ink">
+                {masterResult}
+              </pre>
+            )}
+            {/* master에서 추출된 이미지 프롬프트들 → 개별 렌더 */}
+            {imagePrompts.length > 0 && (
+              <div className="mt-4 flex flex-col gap-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-accent">
+                  {tr("extractedImages", { count: imagePrompts.length })}
                 </p>
-                <pre className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink">
-                  {afterResult}
-                </pre>
+                {imagePrompts.map((ip, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-md border border-border bg-bg p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-ink">{ip.label}</span>
+                      <button
+                        type="button"
+                        disabled={imgBusy[idx]}
+                        onClick={() => renderImage(idx, ip.prompt)}
+                        className="shrink-0 rounded-pill bg-accent px-3 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        🖼 {tr("renderImage")}
+                      </button>
+                    </div>
+                    <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-muted">
+                      {ip.prompt}
+                    </pre>
+                    {imgBusy[idx] && <Spinner />}
+                    {images[idx] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={images[idx]}
+                        alt={ip.label}
+                        className="mt-2 w-full max-w-sm rounded-md border border-border"
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="flex gap-2">
             <button
