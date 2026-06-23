@@ -20,8 +20,13 @@ export interface EngineAnswer {
 export interface IntentResult {
   intentGuess: string;
   needsQuestions: boolean;
-  /** 최대 3개. needsQuestions=false 면 빈 배열. */
+  /** 최대 5개. needsQuestions=false 면 빈 배열. */
   questions: EngineQuestion[];
+  /**
+   * 외부의 "현재 사실"(시세·규정·트렌드·실제 스펙 등)에 의존하는 결과물이면 true.
+   * 순수 창작/형식 작업(시·축하문구·일반 일러스트)이면 false → web_search 생략(속도·비용↓).
+   */
+  needsGrounding: boolean;
 }
 
 // ── 프롬프트 패키지 (v6) ─────────────────────────────────────────

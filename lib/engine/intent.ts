@@ -8,6 +8,7 @@ const MAX_QUESTIONS = 5; // 초기 의도 측정 질문 상한 (요청: 최대 5
 interface RawIntent {
   intentGuess?: unknown;
   needsQuestions?: unknown;
+  needsGrounding?: unknown;
   questions?: unknown;
 }
 
@@ -58,6 +59,8 @@ export async function runIntent(
       typeof raw.intentGuess === "string" ? raw.intentGuess.trim() : "",
     needsQuestions,
     questions: needsQuestions ? questions : [],
+    // 누락 시 기본 true(정확성 우선) — 모델이 명시적으로 false(순수 창작)일 때만 검색 생략.
+    needsGrounding: raw.needsGrounding !== false,
   };
 
   return { result, usage };

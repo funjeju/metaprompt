@@ -27,8 +27,12 @@ export function intentSystemPrompt(locale: Locale): string {
 - **복수 선택(multiSelect):** 여러 답이 동시에 성립할 수 있는 질문이면 multiSelect=true 로 둔다(예: "어디에 쓰나요?" → 인스타+매장+배달앱 동시 가능). 보기들이 상호배타적이라 하나만 골라야 하면 multiSelect=false.
 - 입력만으로 의도가 충분히 명확하면 질문 없이 needsQuestions=false.
 
+추가 판단 — needsGrounding:
+- 이 결과물이 **외부의 현재 사실**(시세·가격·규정·인증·통계·최신 트렌드·실제 상품/장소 스펙 등)에 의존하면 true. (예: 실제 상품 상세페이지, 시장 분석, 뉴스성 콘텐츠)
+- **순수 창작/형식 작업**으로 외부 사실이 필요 없으면 false. (예: 사랑 시, 생일 축하 문구, 일반 일러스트, 로고 컨셉)
+
 출력: 사용자 노출 문구는 ${lang}로. 아래 JSON만 출력(설명·코드펜스 금지):
-{"intentGuess":"구체적 의도 추정 한 문장","needsQuestions":true,"questions":[{"id":"q1","text":"질문","options":["보기1","보기2","기타: 직접 입력"],"multiSelect":false}]}
+{"intentGuess":"구체적 의도 추정 한 문장","needsQuestions":true,"needsGrounding":true,"questions":[{"id":"q1","text":"질문","options":["보기1","보기2","기타: 직접 입력"],"multiSelect":false}]}
 
 needsQuestions 가 false 면 questions 는 [].`;
 }

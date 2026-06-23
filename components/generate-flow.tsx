@@ -15,6 +15,7 @@ interface IntentResponse {
   sessionId: string;
   intentGuess: string;
   needsQuestions: boolean;
+  needsGrounding?: boolean;
   questions: Question[];
 }
 type PromptTarget = "text" | "image" | "audio" | "video" | "code" | "other";
@@ -214,6 +215,7 @@ export function GenerateFlow() {
             intentGuess: intentData.intentGuess,
             answers: buildAnswers(),
             userMaterial,
+            needsGrounding: intentData.needsGrounding,
             locale,
             outputLang: lang,
           }),

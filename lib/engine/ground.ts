@@ -41,8 +41,10 @@ export interface RunGroundingInput {
   inputText: string;
   intentGuess: string;
   answers: EngineAnswer[];
-  /** 유저가 올린 참고 자료(URL 또는 텍스트, 선택). */
+  /** 유저가 올린 참고 자료(URL 또는 텍스트, 선택). 있으면 항상 근거로 사용. */
   userMaterial?: string;
+  /** 실시간 web_search 수행 여부(필요시에만). false면 검색 생략(속도·비용↓). */
+  webSearch: boolean;
   outputLang: Locale;
 }
 
@@ -56,22 +58,25 @@ export interface RunGroundingOutput {
 export async function runGrounding(
   input: RunGroundingInput,
 ): Promise<RunGroundingOutput> {
-  const { inputText, intentGuess, answers, userMaterial, outputLang } = input;
+  const { inputText, intentGuess, answers, userMaterial, webSearch, outputLang } =
+    input;
   const L = LANG_LABEL[outputLang];
-
-  const answerLine = answers.map((a) => a.value).join(", ");
-  const query = `다음 주제로 ${L} 결과물을 만들기 위한 "현재(최신) 사실·수치·트렌드·업계 관례"를 신뢰할 출처와 함께 조사해줘. 추측 금지, 확인되는 것만. 주제: "${inputText}". 의도: ${intentGuess}. 사용자 선택: ${answerLine || "(없음)"}. 핵심 사실 3~6개를 출처와 함께 ${L}로 간결히.`;
 
   let webText = "";
   let sources: EngineSource[] = [];
   let usage: WebSearchResult | null = null;
-  try {
-    const r = await webSearchGround(query);
-    webText = r.text;
-    sources = r.citations;
-    usage = r;
-  } catch (err) {
-    console.warn("[grounding] web_search 실패(무시하고 진행):", err);
+  // 필요시에만 실시간 검색 (순수 창작 등은 생략).
+  if (webSearch) {
+    const answerLine = answers.map((a) => a.value).join(", ");
+    const query = `다음 주제로 ${L} 결과물을 만들기 위한 "현재(최신) 사실·수치·트렌드·업계 관례"를 신뢰할 출처와 함께 조사해줘. 추측 금지, 확인되는 것만. 주제: "${inputText}". 의도: ${intentGuess}. 사용자 선택: ${answerLine || "(없음)"}. 핵심 사실 3~6개를 출처와 함께 ${L}로 간결히.`;
+    try {
+      const r = await webSearchGround(query);
+      webText = r.text;
+      sources = r.citations;
+      usage = r;
+    } catch (err) {
+      console.warn("[grounding] web_search 실패(무시하고 진행):", err);
+    }
   }
 
   const materialText = userMaterial

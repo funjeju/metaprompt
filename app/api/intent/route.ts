@@ -83,6 +83,7 @@ export async function POST(req: Request) {
       sessionId,
       intentGuess: result.intentGuess,
       needsQuestions: result.needsQuestions,
+      needsGrounding: result.needsGrounding,
       questions: result.questions,
     });
   } catch (err) {

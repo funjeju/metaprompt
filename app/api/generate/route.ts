@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     intentGuess?: unknown;
     answers?: unknown;
     userMaterial?: unknown;
+    needsGrounding?: unknown;
     locale?: unknown;
     outputLang?: unknown;
   };
@@ -55,6 +56,8 @@ export async function POST(req: Request) {
     typeof body.userMaterial === "string"
       ? body.userMaterial.trim().slice(0, 6000)
       : "";
+  // 필요시에만 검색: 1층 판단(needsGrounding) 따름. 누락 시 기본 true.
+  const webSearch = body.needsGrounding !== false;
   const outputLang = normalizeLocale(body.outputLang ?? body.locale);
 
   // 답변 정규화 — id/value 문자열만 통과.
@@ -78,7 +81,14 @@ export async function POST(req: Request) {
   try {
     // RAG grounding(실시간 web_search)과 설계도는 서로 독립 → 병렬 실행으로 지연 단축.
     const [grounding, bp] = await Promise.all([
-      runGrounding({ inputText, intentGuess, answers, userMaterial, outputLang }),
+      runGrounding({
+        inputText,
+        intentGuess,
+        answers,
+        userMaterial,
+        webSearch,
+        outputLang,
+      }),
       runBlueprint({ inputText, intentGuess, answers, outputLang }),
     ]);
     const { blueprint, blueprintText, usage: bpUsage } = bp;
