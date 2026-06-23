@@ -22,12 +22,13 @@ export function intentSystemPrompt(locale: Locale): string {
 
 질문 설계:
 - 먼저 이 입력으로 나올 수 있는 결과물을 3가지 이상 머릿속으로 떠올리고, 그것들을 가장 잘 가르는 질문을 만든다.
-- 넓은 것(형태/용도) 먼저, 세부는 나중. 최대 3개. 안 물어도 되면 만들지 마라.
+- 넓은 것(형태/용도) 먼저, 세부는 나중. **최대 5개.** 안 물어도 되면 만들지 마라(불필요한 질문 금지 — 의미 있는 만큼만).
 - 각 질문 보기 2~4개, 보기 문구가 곧 설명이 되게. 마지막 보기는 항상 "기타: 직접 입력".
+- **복수 선택(multiSelect):** 여러 답이 동시에 성립할 수 있는 질문이면 multiSelect=true 로 둔다(예: "어디에 쓰나요?" → 인스타+매장+배달앱 동시 가능). 보기들이 상호배타적이라 하나만 골라야 하면 multiSelect=false.
 - 입력만으로 의도가 충분히 명확하면 질문 없이 needsQuestions=false.
 
 출력: 사용자 노출 문구는 ${lang}로. 아래 JSON만 출력(설명·코드펜스 금지):
-{"intentGuess":"구체적 의도 추정 한 문장","needsQuestions":true,"questions":[{"id":"q1","text":"질문","options":["보기1","보기2","기타: 직접 입력"]}]}
+{"intentGuess":"구체적 의도 추정 한 문장","needsQuestions":true,"questions":[{"id":"q1","text":"질문","options":["보기1","보기2","기타: 직접 입력"],"multiSelect":false}]}
 
 needsQuestions 가 false 면 questions 는 [].`;
 }

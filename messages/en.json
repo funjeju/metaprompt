@@ -14,6 +14,7 @@
     "intentBanner": "Here's what we understood",
     "intentConfirm": "Right? Answer the questions below to make it more accurate.",
     "questionStep": "{current} / {total}",
+    "multiSelectHint": "multiple choices allowed",
     "otherOption": "Other: type your own",
     "otherPlaceholder": "Type your own",
     "back": "Back",
@@ -30,7 +31,16 @@
     "copy": "Copy",
     "copied": "Copied!",
     "assumptions": "Auto-filled assumptions",
-    "editHint": "Make it even better"
+    "editHint": "Make it even better",
+    "runResult": "Run this prompt now",
+    "compare": "Before / After compare",
+    "running": "Generating the result…",
+    "resultLabel": "Generated result",
+    "beforeLabel": "Raw input as-is",
+    "afterLabel": "With optimized prompt",
+    "packageBadge": "{count} prompts",
+    "runItem": "Run this prompt",
+    "renderImage": "Generate image"
   },
   "theme": {
     "light": "Light",

@@ -1,48 +1,90 @@
 import { callLLM, type LlmCallResult } from "@/lib/llm";
 import { extractJson } from "./json";
-import { generateSystemPrompt, generateUserPrompt } from "./prompts/generate";
-import type { EngineAnswer, GenerateResult, Locale } from "./types";
+import {
+  synthesisSystemPrompt,
+  synthesisUserPrompt,
+} from "./prompts/generate";
+import type {
+  Blueprint,
+  EngineAnswer,
+  GenerateResult,
+  Locale,
+  PromptItem,
+  PromptTarget,
+} from "./types";
 
-interface RawGenerate {
+const VALID_TARGETS: PromptTarget[] = [
+  "text",
+  "image",
+  "audio",
+  "video",
+  "code",
+  "other",
+];
+const asTarget = (v: unknown): PromptTarget =>
+  VALID_TARGETS.includes(v as PromptTarget) ? (v as PromptTarget) : "text";
+
+interface RawSynthesis {
   routedModule?: unknown;
-  finalPrompt?: unknown;
+  outputKind?: unknown;
+  summary?: unknown;
+  prompts?: unknown;
   assumptions?: unknown;
   editHint?: unknown;
 }
 
-export interface RunGenerateInput {
+export interface RunSynthesisInput {
   inputText: string;
   intentGuess: string;
   answers: EngineAnswer[];
-  /** 생성 프롬프트 언어 — UI 언어와 별개 (docs/02 2.4, docs/04 4.4). */
+  blueprint: Blueprint;
+  blueprintText: string;
+  /** 생성 프롬프트 언어 — UI 언어와 별개 (docs/04 4.4). */
   outputLang: Locale;
 }
 
-export interface RunGenerateOutput {
+export interface RunSynthesisOutput {
   result: GenerateResult;
   usage: LlmCallResult;
 }
 
-export async function runGenerate(
-  input: RunGenerateInput,
-): Promise<RunGenerateOutput> {
-  const { inputText, intentGuess, answers, outputLang } = input;
+export async function runSynthesis(
+  input: RunSynthesisInput,
+): Promise<RunSynthesisOutput> {
+  const { inputText, intentGuess, answers, blueprint, blueprintText, outputLang } =
+    input;
 
   const usage = await callLLM({
     layer: "generate",
-    system: generateSystemPrompt(outputLang),
-    user: generateUserPrompt(inputText, intentGuess, answers),
+    system: synthesisSystemPrompt(outputLang),
+    user: synthesisUserPrompt(inputText, intentGuess, answers, blueprintText),
   });
 
-  const raw = extractJson<RawGenerate>(usage.text);
+  const raw = extractJson<RawSynthesis>(usage.text);
+
+  const prompts: PromptItem[] = Array.isArray(raw.prompts)
+    ? raw.prompts
+        .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+        .map((p, i) => ({
+          id: typeof p.id === "string" && p.id.trim() ? p.id.trim() : `p${i + 1}`,
+          label: typeof p.label === "string" ? p.label : `프롬프트 ${i + 1}`,
+          target: asTarget(p.target),
+          prompt: typeof p.prompt === "string" ? p.prompt.trim() : "",
+        }))
+        .filter((p) => p.prompt)
+    : [];
+
+  const outputKind =
+    raw.outputKind === "package" || prompts.length > 1 ? "package" : "single";
 
   const result: GenerateResult = {
     routedModule:
       typeof raw.routedModule === "string" && raw.routedModule.trim()
         ? raw.routedModule.trim()
-        : "generic",
-    finalPrompt:
-      typeof raw.finalPrompt === "string" ? raw.finalPrompt.trim() : "",
+        : blueprint.outputForm,
+    outputKind,
+    summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
+    prompts,
     assumptions: Array.isArray(raw.assumptions)
       ? raw.assumptions.filter((a): a is string => typeof a === "string")
       : [],

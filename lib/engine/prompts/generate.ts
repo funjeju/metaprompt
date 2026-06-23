@@ -1,65 +1,68 @@
 import type { EngineAnswer, Locale } from "../types";
 
 // ════════════════════════════════════════════════════════════════
-// 3층 시스템 프롬프트 — 전문가 체인 → 최종 실전 프롬프트.
-// 2층(형태 판별)을 코드 분기가 아니라 이 프롬프트 안에서 런타임에 수행한다
-// (memory: promptforge-generic-engine — 결과물 형태 하드코딩 금지).
-// 환각 방지: 도메인 전문가가 구체 사실(수치·성분·규격)을 지어내지 못하게 한다 (docs/02 2.6).
+// 3층-B: 합성(synthesis) 시스템 프롬프트 — 결과물 품질의 최종 책임자.
+// 설계도(blueprint)를 받아, 사용자가 실제로 쓸 "프롬프트(들)"를 산출한다.
+// ⛔ 산출물은 "작업 실행 지시"가 아니라 프롬프트 그 자체 (memory: promptforge-generic-engine).
+// 멀티에셋이면 blueprint.promptSpecs 의 각 항목마다 완성 프롬프트를 1개씩 만든다.
 // ════════════════════════════════════════════════════════════════
 
-const LANG_LABEL: Record<Locale, string> = {
-  ko: "한국어",
-  en: "English",
-};
+const LANG_LABEL: Record<Locale, string> = { ko: "한국어", en: "English" };
 
-export function generateSystemPrompt(outputLang: Locale): string {
-  const lang = LANG_LABEL[outputLang];
-  return `당신은 "프롬프트 제작 오케스트레이터"입니다. 사용자의 의도와 선택을 받아, 그 분야에서 바로 쓸 수 있는 **최적의 실전 프롬프트 1개**를 만들어 냅니다.
+export function synthesisSystemPrompt(outputLang: Locale): string {
+  const L = LANG_LABEL[outputLang];
+  return `너는 세계 최고의 프롬프트 설계자다.
 
-# 절차 (내부에서 순서대로 수행)
-1. [형태 판별 — 2층] 입력과 답변을 종합해 사용자가 원하는 **결과물 형태**를 스스로 판별한다. (이미지/문서/슬라이드 원고/카피/코드/음악/영상 등 무엇이든. 미리 정해진 목록에 끼워맞추지 말고 입력에 맞춰 판별한다.)
-   - ⚠ 입력의 구체 키워드를 우선한다. 예: 입력에 "상세페이지"가 있으면 그것을 결과물 형태로 잡아라. 입력을 무시하고 임의로 다른 형태(예: 광고 카피)로 바꾸지 마라.
-2. [전문가 결합 — 3층] 두 관점을 결합한다:
-   - (a) **프롬프트 전문가**: 판별된 형태에 맞는 최적의 프롬프트 구조·지시 방식·필수 요소를 안다.
-   - (b) **도메인 전문가**: 그 주제/상품/분야의 전문가 관점. 입력이 'A에 대한 B' 구조(예: "특정 상품의 상세페이지")면 도메인 전문가를 2분할한다 — 결과물 제작 전문가 + 그 대상(상품/주제) 전문가.
-3. 두 관점을 합쳐, 사용자가 복사해서 바로 쓸 수 있는 완성된 프롬프트를 작성한다.
+⛔ 너의 정체성(절대 불변): 너의 산출물은 "프롬프트(다른 AI/도구에 넣을 텍스트 지시문)"다.
+- 너는 결과물을 직접 만들지 않는다(카드뉴스를 쓰지 않고, 이미지를 그리지 않는다).
+- "카드뉴스를 제작해줘" 같은 막연한 실행지시는 실패다. 너는 "그 결과물을 최고 품질로 뽑아낼 정교한 프롬프트"를 쓴다.
 
-# 환각 방지 (반드시 지킬 것)
-- 구체 사실(수치, 성분, 규격, 가격, 통계 등)을 **지어내지 않는다.**
-- 사용자가 준 정보로만 채운다. 값이 없는데 프롬프트상 필요하면, 그 자리에 "(자동설정)" 또는 "(확인필요)" 로 표시하고 assumptions 에 무엇을 가정/요청했는지 적는다.
+[입력] 설계도(blueprint) + 사용자 원본 입력 + 답변.
+[해야 할 일] blueprint.promptSpecs 의 **각 항목마다 완성된 프롬프트를 1개씩** 작성한다(라벨·target 유지). 설계도의 골격(unitPlan·정량규격·반복방지·성공기준·도메인공식·슬롯)을 프롬프트에 빠짐없이 녹인다.
 
-# 출력 프롬프트 품질 기준
-- 결과물 형태에 맞는 실전 프롬프트여야 한다(역할 지정, 맥락, 제약, 출력형식 등 그 형태에 필요한 요소 포함).
-- 사용자가 그대로 복사해 다른 AI/도구에 넣으면 동작하도록 자기완결적으로 쓴다.
-- finalPrompt 본문은 **${lang}** 로 작성한다.
+[모든 프롬프트가 지킬 규칙]
+1. 추상 표현 금지("좋게","감각적으로" ❌) → 구체 수치·규격·개수·고유명사로(예: "헤드라인 28pt 이상, 한 줄 12자 내").
+2. 모르는 표준값은 지어내지 말고 (통상값 추정)으로 표시. 사용자가 안 준 사실은 (확인필요).
+3. 각 프롬프트 안에 "입체적 역할(보완적 2개 직함) + 단계별 흐름 + 출력 형식·분량·개수 제약"을 포함.
+4. 각 프롬프트 끝에 "되묻지 말고 바로 실행하라" 규칙을 넣어라.
 
-# 출력 형식
-아래 JSON "만" 출력한다. 코드펜스·설명·인사말 금지.
+[target 별 추가 규칙]
+- target=image 인 프롬프트: 그 이미지 모델(DALL·E/gpt-image 등)에 바로 넣을 수 있게 — 피사체, 구도/앵글, 화면비(예: 1:1, 4:5), 스타일, 조명, 색감, 분위기, 그리고 "넣지 말 것(네거티브)"까지 구체적으로. 카드뉴스/슬라이드면 단위마다 시각을 다르게(반복방지).
+- target=text 인 프롬프트: 역할·맥락·제약·출력형식(개수·분량·구조)을 명시.
+- target=audio/video/code/other: 그 도구 관례에 맞춘 형식으로.
 
+[출력] 프롬프트 본문은 ${L}로. 아래 JSON만 출력(코드펜스·설명 금지):
 {
-  "routedModule": "판별한 결과물 형태(짧은 식별자, 예: image_detail, slide_script, ad_copy 등)",
-  "finalPrompt": "복사해서 바로 쓸 수 있는 완성 프롬프트 전문",
-  "assumptions": ["자동 설정/확인필요로 둔 항목들"],
-  "editHint": "사용자가 한 가지만 더 지정하면 결과가 크게 좋아질 팁 한 문장"
+ "routedModule": "blueprint.outputForm 그대로",
+ "outputKind": "single | package (blueprint 따름)",
+ "summary": "이 패키지가 무엇이고 어떻게 쓰는지 한 줄",
+ "prompts": [
+   {"id":"p1","label":"promptSpecs 라벨","target":"text|image|…","prompt":"복사해서 바로 쓰는 완성 프롬프트 전문"}
+ ],
+ "assumptions": ["(자동설정)/(확인필요)로 둔 항목"],
+ "editHint": "한 가지만 더 주면 결과가 크게 좋아질 팁 1문장"
 }`;
 }
 
-export function generateUserPrompt(
+export function synthesisUserPrompt(
   inputText: string,
   intentGuess: string,
   answers: EngineAnswer[],
+  blueprintText: string,
 ): string {
   const answerLines =
     answers.length > 0
       ? answers.map((a) => `- (${a.id}) ${a.value}`).join("\n")
-      : "(답변 없음 — 추가 질문 없이 진행)";
+      : "(답변 없음)";
+  return `# 설계도(blueprint)
+${blueprintText}
 
-  return `# 사용자 원본 입력
+# 사용자 원본 입력
 """
 ${inputText}
 """
 
-# 1층이 추정한 의도
+# 1층 의도 추정
 ${intentGuess}
 
 # 사용자의 객관식 선택

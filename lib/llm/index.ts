@@ -15,13 +15,17 @@ export type { LlmCallParams, LlmCallResult, LlmLayer } from "./types";
 const DEFAULT_MODEL: Record<LlmLayer, string> = {
   intent: "gpt-5.4-mini",
   generate: "gpt-5.4-mini",
+  run: "gpt-5.4-mini",
 };
 
 function modelFor(layer: LlmLayer): string {
+  // run 은 별도 env 없으면 generate 모델을 따른다.
   const fromEnv =
     layer === "intent"
       ? process.env.LLM_MODEL_INTENT
-      : process.env.LLM_MODEL_GENERATE;
+      : layer === "run"
+        ? process.env.LLM_MODEL_RUN || process.env.LLM_MODEL_GENERATE
+        : process.env.LLM_MODEL_GENERATE;
   return fromEnv?.trim() || DEFAULT_MODEL[layer];
 }
 
@@ -54,7 +58,7 @@ export function isLlmConfigured(): boolean {
 }
 
 export async function callLLM(params: LlmCallParams): Promise<LlmCallResult> {
-  const { layer, system, user, maxTokens, temperature } = params;
+  const { layer, system, user, maxTokens, temperature, json } = params;
   const model = modelFor(layer);
   const openai = getClient();
 
@@ -66,14 +70,17 @@ export async function callLLM(params: LlmCallParams): Promise<LlmCallResult> {
 
   const req: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
     model,
-    // 엔진 프롬프트가 모두 "JSON만 출력"을 요구하므로 JSON 모드로 파싱 안정성 확보.
-    // (json_object 모드는 프롬프트에 "json" 문구가 있어야 한다 — 두 프롬프트 모두 충족.)
-    response_format: { type: "json_object" },
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
     ],
   };
+
+  // JSON 모드는 엔진 호출(intent/generate)용. run 등 평문 결과는 json=false.
+  // (json_object 모드는 프롬프트에 "json" 문구가 있어야 한다 — 엔진 프롬프트 모두 충족.)
+  if (json !== false) {
+    req.response_format = { type: "json_object" };
+  }
 
   if (isGpt5) {
     req.max_completion_tokens =
@@ -96,5 +103,33 @@ export async function callLLM(params: LlmCallParams): Promise<LlmCallResult> {
     inputTokens: completion.usage?.prompt_tokens ?? 0,
     outputTokens: completion.usage?.completion_tokens ?? 0,
     latencyMs,
+  };
+}
+
+// ── 이미지 생성 (결과물 바로 보기 — target=image 렌더) ──────────────
+// DECISION: 기본 gpt-image-1-mini (2026-06 최저가, 카드당 ~$0.005). env LLM_MODEL_IMAGE 로 교체.
+export interface ImageResult {
+  b64: string;
+  model: string;
+  latencyMs: number;
+}
+
+export async function generateImage(
+  prompt: string,
+  opts?: { size?: "1024x1024" | "1024x1536" | "1536x1024" | "auto" },
+): Promise<ImageResult> {
+  const model = process.env.LLM_MODEL_IMAGE?.trim() || "gpt-image-1-mini";
+  const openai = getClient();
+  const startedAt = Date.now();
+  const res = await openai.images.generate({
+    model,
+    prompt,
+    size: opts?.size ?? "1024x1024",
+    n: 1,
+  });
+  return {
+    b64: res.data?.[0]?.b64_json ?? "",
+    model,
+    latencyMs: Date.now() - startedAt,
   };
 }

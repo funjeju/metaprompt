@@ -5,6 +5,7 @@ import type {
   EngineAnswer,
   EngineQuestion,
   Locale,
+  PromptItem,
 } from "@/lib/engine/types";
 
 // ════════════════════════════════════════════════════════════════
@@ -63,7 +64,8 @@ export async function completeSession(input: {
   sessionId: string;
   answers: EngineAnswer[];
   routedModule: string;
-  finalPrompt: string;
+  outputKind: "single" | "package";
+  prompts: PromptItem[];
   outputLang: Locale;
 }): Promise<void> {
   const db = getAdminDb();
@@ -77,7 +79,10 @@ export async function completeSession(input: {
           {
             answers: input.answers,
             routedModule: input.routedModule,
-            finalPrompt: input.finalPrompt,
+            outputKind: input.outputKind,
+            prompts: input.prompts,
+            // 히스토리 미리보기용 — 첫 프롬프트.
+            finalPrompt: input.prompts[0]?.prompt ?? "",
             outputLang: input.outputLang,
             completedAt: FieldValue.serverTimestamp(),
           },
@@ -91,7 +96,7 @@ export async function completeSession(input: {
 export async function logUsage(input: {
   sessionId: string;
   uid: string | null;
-  layer: "intent" | "generate";
+  layer: "intent" | "generate" | "run";
   model: string;
   inputTokens: number;
   outputTokens: number;

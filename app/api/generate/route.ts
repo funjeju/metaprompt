@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runGenerate, type EngineAnswer } from "@/lib/engine";
+import { runBlueprint, runSynthesis, type EngineAnswer } from "@/lib/engine";
 import { isLlmConfigured, LlmConfigError } from "@/lib/llm";
 import { JsonParseError } from "@/lib/engine/json";
 import {
@@ -65,14 +65,24 @@ export async function POST(req: Request) {
   const uid = sessionUser?.uid ?? null;
 
   try {
-    const { result, usage } = await runGenerate({
+    // 3층-A: 설계도 → 3층-B: 합성(프롬프트 패키지). 2콜 체인.
+    const { blueprint, blueprintText, usage: bpUsage } = await runBlueprint({
       inputText,
       intentGuess,
       answers,
       outputLang,
     });
 
-    if (!result.finalPrompt) {
+    const { result, usage } = await runSynthesis({
+      inputText,
+      intentGuess,
+      answers,
+      blueprint,
+      blueprintText,
+      outputLang,
+    });
+
+    if (result.prompts.length === 0) {
       return jsonError("프롬프트 생성에 실패했습니다.", 502, "empty_output");
     }
 
@@ -81,8 +91,18 @@ export async function POST(req: Request) {
         sessionId: sessionId || "unknown",
         answers,
         routedModule: result.routedModule,
-        finalPrompt: result.finalPrompt,
+        outputKind: result.outputKind,
+        prompts: result.prompts,
         outputLang,
+      }),
+      logUsage({
+        sessionId: sessionId || "unknown",
+        uid,
+        layer: "generate",
+        model: bpUsage.model,
+        inputTokens: bpUsage.inputTokens,
+        outputTokens: bpUsage.outputTokens,
+        latencyMs: bpUsage.latencyMs,
       }),
       logUsage({
         sessionId: sessionId || "unknown",
@@ -104,7 +124,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       routedModule: result.routedModule,
-      finalPrompt: result.finalPrompt,
+      outputKind: result.outputKind,
+      summary: result.summary,
+      prompts: result.prompts,
       assumptions: result.assumptions,
       editHint: result.editHint,
     });

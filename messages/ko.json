@@ -14,6 +14,7 @@
     "intentBanner": "이렇게 이해했어요",
     "intentConfirm": "맞나요? 아래 질문에 답하면 더 정확해져요.",
     "questionStep": "{current} / {total}",
+    "multiSelectHint": "복수 선택 가능",
     "otherOption": "기타: 직접 입력",
     "otherPlaceholder": "직접 입력해 주세요",
     "back": "이전",
@@ -30,7 +31,16 @@
     "copy": "복사",
     "copied": "복사됨!",
     "assumptions": "자동 설정한 항목",
-    "editHint": "이렇게 하면 더 좋아져요"
+    "editHint": "이렇게 하면 더 좋아져요",
+    "runResult": "이 프롬프트로 결과물 바로 보기",
+    "compare": "Before / After 비교",
+    "running": "결과물을 만들고 있어요…",
+    "resultLabel": "생성된 결과물",
+    "beforeLabel": "원본 입력 그대로",
+    "afterLabel": "최적화된 프롬프트로",
+    "packageBadge": "프롬프트 {count}개",
+    "runItem": "이 프롬프트 실행",
+    "renderImage": "이미지 생성"
   },
   "theme": {
     "light": "라이트",

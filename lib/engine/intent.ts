@@ -3,7 +3,7 @@ import { extractJson } from "./json";
 import { intentSystemPrompt, intentUserPrompt } from "./prompts/intent";
 import type { EngineQuestion, IntentResult, Locale } from "./types";
 
-const MAX_QUESTIONS = 3; // docs/02 2.2
+const MAX_QUESTIONS = 5; // 초기 의도 측정 질문 상한 (요청: 최대 5개)
 
 interface RawIntent {
   intentGuess?: unknown;
@@ -25,7 +25,8 @@ function sanitizeQuestions(raw: unknown): EngineQuestion[] {
     questions.push({
       id: typeof q.id === "string" && q.id.trim() ? q.id.trim() : `q${i + 1}`,
       text,
-      options: options.slice(0, 4), // 최대 4개
+      options: options.slice(0, 5), // 보기 최대 5개("기타" 포함)
+      multiSelect: q.multiSelect === true,
     });
   });
   return questions;
